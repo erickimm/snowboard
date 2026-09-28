@@ -6,7 +6,7 @@
 <title>Snowboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <style>
 :root{
   --paper:#FFFFFF; --ink:#3A3935; --muted:#8C877D;
@@ -17,7 +17,7 @@
 *,*::before,*::after{box-sizing:inherit}
 html,body{height:100%;margin:0;background:#FFFFFF;color-scheme:light}
 body{background:var(--paper);color:var(--ink);font-family:"Newsreader",Georgia,"Times New Roman",serif;overflow:hidden;-webkit-font-smoothing:antialiased}
-canvas{position:fixed;inset:0;width:100%;height:100%;touch-action:none;display:block;cursor:pointer}
+canvas{opacity:0;transition:opacity .5s ease;position:fixed;inset:0;width:100%;height:100%;touch-action:none;display:block;cursor:pointer}
 header{position:fixed;top:calc(28px + env(safe-area-inset-top,0px));left:36px;right:36px;display:flex;justify-content:space-between;align-items:baseline;gap:24px;z-index:2;pointer-events:none}
 header>*{pointer-events:auto}
 .id h1{font-size:1.25rem;font-weight:500;margin:0;letter-spacing:.005em}
@@ -68,6 +68,8 @@ function makeNoise(seed){
 
 /* ---------- baked layers: soft grainy mask, sky, film grain, mountains ---------- */
 function bake(){
+  // textures are generated at 1x and scaled up: 4x less work on retina screens, grain stays crisp enough
+  const dpr = 1;
   const cw = Math.round(W*dpr), ch = Math.round(H*dpr);
   const e = makeNoise(31), n = makeNoise(7);
   // mask with dithered, wobbly edge (same feel as the pond reference)
@@ -240,7 +242,7 @@ function layout(){
   bake(); initWorld();
   R.state = 'ride'; R.a = 0;
 }
-let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(layout,150); });
+let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (innerWidth !== W || innerHeight !== H) layout(); }, 150); });
 
 addEventListener('pointerdown', e => { if (e.target.closest('a')) return; press(); });
 addEventListener('keydown', e => { if (e.code === 'Space' || e.code === 'Enter'){ e.preventDefault(); press(); } });
@@ -421,7 +423,7 @@ function sparkle(){
 function render(T){
   const c = sctx;
   c.setTransform(1,0,0,1,0,0); c.clearRect(0,0,scene.width,scene.height);
-  c.drawImage(bgC,0,0);
+  c.drawImage(bgC,0,0,scene.width,scene.height);
   c.setTransform(dpr,0,0,dpr,0,0);
   // mountains (parallax)
   const fy = F.y+F.h*0.62 - F.h*0.5, ny = F.y+F.h*0.74 - F.h*0.42;
@@ -458,13 +460,13 @@ function render(T){
   for (const f of flakes){ c.beginPath(); c.arc(f.x, f.y, f.r*S, 0, 6.283); c.fill(); }
   // grain, then the soft grainy edge
   c.setTransform(1,0,0,1,0,0);
-  c.drawImage(grainC,0,0);
-  c.globalCompositeOperation = 'destination-in'; c.drawImage(maskC,0,0); c.globalCompositeOperation = 'source-over';
+  c.imageSmoothingEnabled = false; c.drawImage(grainC,0,0,scene.width,scene.height); c.imageSmoothingEnabled = true;
+  c.globalCompositeOperation = 'destination-in'; c.drawImage(maskC,0,0,scene.width,scene.height); c.globalCompositeOperation = 'source-over';
   ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,cvs.width,cvs.height); ctx.drawImage(scene,0,0);
 }
 
 layout();
-requestAnimationFrame(t => { last = t; frame(t); });
+requestAnimationFrame(t => { last = t; frame(t); cvs.style.opacity = 1; });
 })();
 </script>
 </body>
